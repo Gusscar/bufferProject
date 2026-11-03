@@ -1,4 +1,4 @@
-import { cn } from "@/lib/format";
+import { cn, STATUS_LABEL } from "@/lib/format";
 import type { ReactNode } from "react";
 
 type Tone = "neutral" | "accent" | "teal" | "danger" | "warning";
@@ -61,7 +61,7 @@ export function StatusBadge({ status }: { status: string }) {
           status === "needs_approval" && "bg-warning",
         )}
       />
-      {status}
+      {STATUS_LABEL[status] ?? status}
     </NeuBadge>
   );
 }

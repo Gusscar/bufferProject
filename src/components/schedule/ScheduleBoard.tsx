@@ -6,6 +6,7 @@ import { dayName } from "@/lib/format";
 import type { Channel, DayOfWeek } from "@/types";
 
 const DAYS: DayOfWeek[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+const BUFFER_APP_URL = "https://buffer.com/app";
 
 export function ScheduleBoard({ channels }: { channels: Channel[] }) {
   const withSchedule = channels.filter((c) => c.postingSchedule.length > 0);
@@ -17,6 +18,13 @@ export function ScheduleBoard({ channels }: { channels: Channel[] }) {
         <p className="mt-1 text-sm text-muted">
           Buffer publica automáticamente en la cola según estos horarios. La cola asigna las
           fechas según el orden de creación. Para cambiarlos, edítalos en Buffer.
+        </p>
+        <p className="mt-2 flex items-start gap-1.5 text-xs text-muted">
+          <IconClock className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          Cada hora que ves abajo es un espacio fijo de la cola para ese día: cuando llega esa
+          hora, Buffer toma la siguiente publicación en espera y la envía. Si no hay nada en
+          cola, ese espacio se pierde. &quot;Sin horas&quot; significa que el canal no tiene
+          espacios configurados ese día.
         </p>
       </section>
 
@@ -45,16 +53,14 @@ export function ScheduleBoard({ channels }: { channels: Channel[] }) {
                 </p>
               </div>
             </div>
-            {ch.externalLink && (
-              <a
-                href={ch.externalLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="neu-btn !px-3 !py-1.5 text-xs"
-              >
-                <IconExternal className="h-3.5 w-3.5" /> Editar en Buffer
-              </a>
-            )}
+            <a
+              href={BUFFER_APP_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="neu-btn !px-3 !py-1.5 text-xs"
+            >
+              <IconExternal className="h-3.5 w-3.5" /> Editar en Buffer
+            </a>
           </div>
 
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">

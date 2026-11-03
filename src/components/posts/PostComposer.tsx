@@ -43,6 +43,15 @@ const INSTAGRAM_TYPES: Record<string, string> = {
   reel: "Reel",
 };
 
+const IMAGE_STYLES: Array<{ id: string; label: string; suffix: string }> = [
+  { id: "none", label: "Sin estilo", suffix: "" },
+  { id: "photo", label: "Fotográfico", suffix: "professional photography, realistic, high detail" },
+  { id: "3d", label: "Render 3D", suffix: "3D render, octane render, studio lighting" },
+  { id: "watercolor", label: "Acuarela", suffix: "watercolor painting, soft brush strokes" },
+  { id: "minimal", label: "Minimalista", suffix: "minimalist flat design, clean background" },
+  { id: "illustration", label: "Ilustración", suffix: "digital illustration, vector art style" },
+];
+
 export function PostComposer({
   channels,
   init,
@@ -63,6 +72,7 @@ export function PostComposer({
   const [imageUrl, setImageUrl] = useState(init?.imageUrl ?? "");
   const [instagramType, setInstagramType] = useState<"post" | "story" | "reel">("post");
   const [prompt, setPrompt] = useState("");
+  const [imageStyle, setImageStyle] = useState("none");
   const [aiPrompt, setAiPrompt] = useState("");
   const [sizeIdx, setSizeIdx] = useState(0);
   const [generating, setGenerating] = useState(false);
@@ -109,11 +119,13 @@ export function PostComposer({
     counterRef.current = attempt;
     try {
       const size = IMAGE_SIZES[sizeIdx];
+      const styleSuffix = IMAGE_STYLES.find((s) => s.id === imageStyle)?.suffix;
+      const finalPrompt = styleSuffix ? `${p}, ${styleSuffix}` : p;
       const res = await fetch("/api/image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          prompt: p,
+          prompt: finalPrompt,
           width: size.width,
           height: size.height,
           seed: randomSeed(),
@@ -347,7 +359,7 @@ export function PostComposer({
       <NeuCard className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <p className="flex items-center gap-2 text-sm font-bold">
-            <IconSparkles className="text-accent" /> Imagen con IA (gratis)
+            <IconSparkles className="text-accent" /> Imagen con IA
           </p>
           {imageUrl && (
             <NeuButton
@@ -445,6 +457,24 @@ export function PostComposer({
                 </button>
               ))}
             </div>
+            <div>
+              <span className="mb-1.5 block text-xs font-semibold text-muted">Estilo</span>
+              <div className="flex flex-wrap gap-2">
+                {IMAGE_STYLES.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => setImageStyle(s.id)}
+                    className={cn(
+                      "neu-chip px-3 py-1.5 text-xs font-semibold",
+                      s.id === imageStyle ? "!shadow-[inset_3px_3px_7px_var(--shadow-dark),inset_-3px_-3px_7px_var(--shadow-light)] text-accent" : "text-muted",
+                    )}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             <div className="flex items-center gap-3 text-xs font-semibold text-muted">
               <span className="h-px flex-1 bg-current opacity-20" />
@@ -518,12 +548,23 @@ function toLocalInput(iso: string): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+// Venezuela ha usado UTC-4 sin horario de verano desde 2016.
+const CARACAS_UTC_OFFSET_HOURS = 4;
+
 function tomorrowOneHour(): string {
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
-  d.setHours(10, 0, 0, 0);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:00`;
+  const now = new Date();
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Caracas",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(now);
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value);
+  // 10:00 hora de Caracas == 10:00 + 4h en UTC (sin cambio de día, sin horario de verano).
+  const tomorrowAt10Caracas = new Date(
+    Date.UTC(get("year"), get("month") - 1, get("day") + 1, 10 + CARACAS_UTC_OFFSET_HOURS, 0, 0),
+  );
+  return toLocalInput(tomorrowAt10Caracas.toISOString());
 }
 
 function randomSeed(): number {

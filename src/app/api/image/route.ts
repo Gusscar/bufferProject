@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { buildImageUrl, IMAGE_SIZES } from "@/lib/pollinations";
 import { getPollinationsApiKey } from "@/lib/store";
+import { translateApiError } from "@/lib/errorTranslate";
 
 const MAX_PROMPT = 1200;
 const TIMEOUT_MS = 120_000;
@@ -105,7 +106,11 @@ export async function GET(request: Request) {
       })
       .catch(() => undefined);
     return NextResponse.json(
-      { error: message || `Pollinations devolvió un error (${upstream.status}).` },
+      {
+        error: message
+          ? translateApiError(message)
+          : `Pollinations devolvió un error (${upstream.status}).`,
+      },
       { status: upstream.status },
     );
   }

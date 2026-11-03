@@ -1,4 +1,5 @@
 import { getPollinationsApiKey, getStore } from "@/lib/store";
+import { translateApiError } from "@/lib/errorTranslate";
 
 export const LLM_BASE_URL = "https://gen.pollinations.ai/v1";
 export const LLM_DEFAULT_MODEL = "openai";
@@ -76,7 +77,9 @@ export async function llmChat(
   }
 
   if (!res.ok) {
-    const msg = json.error?.message || `El proveedor de IA devolvió HTTP ${res.status}`;
+    const msg = json.error?.message
+      ? translateApiError(json.error.message)
+      : `El proveedor de IA devolvió HTTP ${res.status}`;
     throw new LlmError(msg, res.status);
   }
 

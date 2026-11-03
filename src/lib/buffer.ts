@@ -1,4 +1,5 @@
 import { cacheGet, cacheSet, getBufferApiKey } from "@/lib/store";
+import { translateApiError, translateErrorCode } from "@/lib/errorTranslate";
 import type {
   Account,
   AggregatedMetrics,
@@ -32,7 +33,12 @@ export class BufferNotConfigured extends BufferError {
 
 export interface BufferQueryResult<T> {
   data?: T;
-  errors?: Array<{ message: string }>;
+  errors?: Array<{ message: string; extensions?: { code?: string } }>;
+}
+
+function translateBufferError(err?: { message: string; extensions?: { code?: string } }): string {
+  if (!err) return "Buffer devolvió un error desconocido.";
+  return translateErrorCode(err.extensions?.code) ?? translateApiError(err.message);
 }
 
 export async function bufferFetch<T>(
@@ -70,12 +76,13 @@ export async function bufferFetch<T>(
   }
 
   if (!res.ok) {
-    const msg =
-      json?.errors?.[0]?.message || `Buffer devolvió HTTP ${res.status}`;
+    const msg = json?.errors?.[0]
+      ? translateBufferError(json.errors[0])
+      : `Buffer devolvió un error (HTTP ${res.status}).`;
     throw new BufferError(msg, res.status);
   }
   if (json.errors?.length) {
-    throw new BufferError(json.errors[0].message);
+    throw new BufferError(translateBufferError(json.errors[0]));
   }
   if (!json.data) {
     throw new BufferError("Buffer no devolvió datos.");
@@ -295,7 +302,9 @@ export async function createPost(input: CreatePostInput): Promise<string> {
     { bypass: true },
   );
   if (!data.createPost.post) {
-    throw new BufferError(data.createPost.message || "No se pudo crear la publicación.");
+    throw new BufferError(
+      data.createPost.message ? translateApiError(data.createPost.message) : "No se pudo crear la publicación.",
+    );
   }
   return data.createPost.post.id;
 }
@@ -334,7 +343,9 @@ export async function editPost(
     { bypass: true },
   );
   if (!data.editPost.post) {
-    throw new BufferError(data.editPost.message || "No se pudo editar la publicación.");
+    throw new BufferError(
+      data.editPost.message ? translateApiError(data.editPost.message) : "No se pudo editar la publicación.",
+    );
   }
 }
 
@@ -356,6 +367,8 @@ export async function deletePost(id: string): Promise<void> {
     deletePost: { post?: { id: string }; message?: string };
   }>(DELETE_POST_MUTATION, { input: { id } }, { bypass: true });
   if (!data.deletePost.post) {
-    throw new BufferError(data.deletePost.message || "No se pudo eliminar la publicación.");
+    throw new BufferError(
+      data.deletePost.message ? translateApiError(data.deletePost.message) : "No se pudo eliminar la publicación.",
+    );
   }
 }

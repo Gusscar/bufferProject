@@ -16,11 +16,14 @@ export function dayName(day: string): string {
   return DAY_NAMES[day] ?? day;
 }
 
+export const APP_TIMEZONE = "America/Caracas";
+
 export function formatDate(iso?: string | null): string {
   if (!iso) return "—";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return new Intl.DateTimeFormat("es-ES", {
+  return new Intl.DateTimeFormat("es-VE", {
+    timeZone: APP_TIMEZONE,
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -33,7 +36,8 @@ export function formatDay(iso?: string | null): string {
   if (!iso) return "—";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return new Intl.DateTimeFormat("es-ES", {
+  return new Intl.DateTimeFormat("es-VE", {
+    timeZone: APP_TIMEZONE,
     day: "2-digit",
     month: "short",
     year: "numeric",

@@ -46,10 +46,10 @@ function statLabel(type: string) {
     reactions: "Reacciones",
     comments: "Comentarios",
     shares: "Compartidos",
-    engagementRate: "Engagement",
+    engagementRate: "Tasa de interacción",
     likes: "Me gusta",
     linkClicks: "Clics en enlace",
-    retweets: "Reposts",
+    retweets: "Republicaciones",
     favorites: "Favoritos",
   };
   return labels[type] ?? type;
@@ -58,7 +58,6 @@ function statLabel(type: string) {
 const RANGES = [
   { label: "7 días", days: 7 },
   { label: "28 días", days: 28 },
-  { label: "90 días", days: 90 },
 ];
 
 function rangeDates(days: number) {

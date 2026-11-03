@@ -109,7 +109,7 @@ export function DashboardView({
             accent="warning"
           />
           <NeuStatCard
-            label="Engagement"
+            label="Interacción"
             value={KPI.engagement ? `${round(KPI.engagement)}%` : KPI.impressions}
             hint={
               KPI.engagement
