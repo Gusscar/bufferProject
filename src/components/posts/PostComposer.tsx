@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, type ReactNode } from "react";
 import { NeuButton, NeuSpinner } from "@/components/neu/NeuButton";
 import { NeuInput } from "@/components/neu/NeuInput";
 import { NeuSelect } from "@/components/neu/NeuSelect";
@@ -11,6 +11,8 @@ import { cn, SERVICE_LABEL } from "@/lib/format";
 import {
   IconAlert,
   IconCheck,
+  IconEdit,
+  IconImage,
   IconLink,
   IconRefresh,
   IconSparkles,
@@ -18,6 +20,37 @@ import {
 } from "@/components/icons";
 import type { Channel } from "@/types";
 import type { ComposerInit } from "@/components/posts/PostsBoard";
+
+function ModeToggle<T extends string>({
+  options,
+  value,
+  onChange,
+}: {
+  options: Array<{ id: T; label: string; icon?: ReactNode }>;
+  value: T;
+  onChange: (id: T) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {options.map((o) => (
+        <button
+          key={o.id}
+          type="button"
+          onClick={() => onChange(o.id)}
+          className={cn(
+            "neu-chip flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold",
+            o.id === value
+              ? "!shadow-[inset_3px_3px_7px_var(--shadow-dark),inset_-3px_-3px_7px_var(--shadow-light)] text-accent"
+              : "text-muted",
+          )}
+        >
+          {o.icon}
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 const CHAR_LIMITS: Record<string, number> = {
   twitter: 280,
@@ -71,6 +104,8 @@ export function PostComposer({
   );
   const [imageUrl, setImageUrl] = useState(init?.imageUrl ?? "");
   const [instagramType, setInstagramType] = useState<"post" | "story" | "reel">("post");
+  const [textMode, setTextMode] = useState<"manual" | "ai">("manual");
+  const [imageMode, setImageMode] = useState<"ai" | "upload" | "url">("ai");
   const [prompt, setPrompt] = useState("");
   const [imageStyle, setImageStyle] = useState("none");
   const [aiPrompt, setAiPrompt] = useState("");
@@ -164,6 +199,7 @@ export function PostComposer({
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "No se pudo generar el texto.");
       setText(json.text.slice(0, charLimit));
+      setTextMode("manual");
       setOk("Texto generado con IA. Revísalo y edítalo si lo necesitas.");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error generando el texto.");
@@ -296,70 +332,71 @@ export function PostComposer({
         />
       )}
 
-      <NeuTextarea
-        label={isEdit ? "Texto" : "Texto del post"}
-        placeholder="Escribe el contenido…"
-        value={text}
-        max={charLimit}
-        count={text.length}
-        onChange={(e) => setText(e.target.value)}
-      />
-
-      {/* AI text generator */}
-      <NeuCard className="flex flex-col gap-4">
-        <p className="flex items-center gap-2 text-sm font-bold">
-          <IconSparkles className="text-accent" /> Texto con IA
-        </p>
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <textarea
-            className="neu-input min-h-16 flex-1 resize-y px-4 py-3 text-sm"
-            placeholder="Describe el tema, tono y gancho, p. ej. «publicación sobre los beneficios del café, tono casual, con una pregunta al final»"
-            value={aiPrompt}
-            onChange={(e) => setAiPrompt(e.target.value)}
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="text-sm font-semibold text-muted">
+            {isEdit ? "Texto" : "Texto del post"}
+          </span>
+          <ModeToggle
+            value={textMode}
+            onChange={setTextMode}
+            options={[
+              { id: "manual", label: "Escribir", icon: <IconEdit className="h-3.5 w-3.5" /> },
+              { id: "ai", label: "Generar con IA", icon: <IconSparkles className="h-3.5 w-3.5" /> },
+            ]}
           />
-          <div className="flex flex-col justify-end gap-2">
-            <NeuButton
-              variant="primary"
-              type="button"
-              disabled={generatingText || !aiPrompt.trim()}
-              onClick={() => void generateTextForPost()}
-            >
-              {generatingText ? (
-                <>
-                  <NeuSpinner className="h-4 w-4" /> Generando…
-                </>
-              ) : (
-                <>
-                  <IconSparkles className="h-4 w-4" /> Generar texto
-                </>
-              )}
-            </NeuButton>
-            {text && (
-              <NeuButton
-                variant="ghost"
-                size="xs"
-                type="button"
-                onClick={() => {
-                  setText("");
-                  setAiPrompt("");
-                }}
-              >
-                Limpiar
-              </NeuButton>
-            )}
-          </div>
         </div>
-        <p className="text-xs text-muted">
-          Usa Pollinations (proveedor configurable en Ajustes). El texto se limita a{" "}
-          {charLimit} caracteres según el canal.
-        </p>
-      </NeuCard>
 
-      {/* Image generator */}
+        {textMode === "manual" ? (
+          <NeuTextarea
+            placeholder="Escribe el contenido…"
+            value={text}
+            max={charLimit}
+            count={text.length}
+            onChange={(e) => setText(e.target.value)}
+          />
+        ) : (
+          <NeuCard className="flex flex-col gap-4">
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <textarea
+                className="neu-input min-h-16 flex-1 resize-y px-4 py-3 text-sm"
+                placeholder="Describe el tema, tono y gancho, p. ej. «publicación sobre los beneficios del café, tono casual, con una pregunta al final»"
+                value={aiPrompt}
+                onChange={(e) => setAiPrompt(e.target.value)}
+              />
+              <div className="flex flex-col justify-end gap-2">
+                <NeuButton
+                  variant="primary"
+                  type="button"
+                  disabled={generatingText || !aiPrompt.trim()}
+                  onClick={() => void generateTextForPost()}
+                >
+                  {generatingText ? (
+                    <>
+                      <NeuSpinner className="h-4 w-4" /> Generando…
+                    </>
+                  ) : (
+                    <>
+                      <IconSparkles className="h-4 w-4" /> Generar texto
+                    </>
+                  )}
+                </NeuButton>
+              </div>
+            </div>
+            <p className="text-xs text-muted">
+              Usa Pollinations (proveedor configurable en Ajustes). El texto se limita a{" "}
+              {charLimit} caracteres según el canal. Al generarlo pasarás automáticamente a
+              &quot;Escribir&quot; para revisarlo y editarlo antes de publicar.
+            </p>
+          </NeuCard>
+        )}
+      </div>
+
+      {/* Image */}
       <NeuCard className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <p className="flex items-center gap-2 text-sm font-bold">
-            <IconSparkles className="text-accent" /> Imagen con IA
+            <IconImage className="text-accent" /> Imagen
           </p>
           {imageUrl && (
             <NeuButton
@@ -379,30 +416,32 @@ export function PostComposer({
           <div className="flex flex-col items-center gap-3 sm:flex-row">
             <img
               src={imageUrl}
-              alt="Imagen generada"
+              alt="Imagen del post"
               className="neu-pressed-sm h-44 w-44 shrink-0 rounded-2xl object-cover"
             />
             <div className="flex w-full flex-col gap-2">
-              <NeuButton
-                variant="ghost"
-                size="sm"
-                type="button"
-                disabled={generating}
-                onClick={generateImage}
-              >
-                {generating ? (
-                  <>
-                    <NeuSpinner className="h-4 w-4" /> Generando…
-                  </>
-                ) : (
-                  <>
-                    <IconRefresh className="h-4 w-4" /> Regenerar
-                  </>
-                )}
-              </NeuButton>
+              {prompt.trim() && (
+                <NeuButton
+                  variant="ghost"
+                  size="sm"
+                  type="button"
+                  disabled={generating}
+                  onClick={generateImage}
+                >
+                  {generating ? (
+                    <>
+                      <NeuSpinner className="h-4 w-4" /> Generando…
+                    </>
+                  ) : (
+                    <>
+                      <IconRefresh className="h-4 w-4" /> Regenerar con IA
+                    </>
+                  )}
+                </NeuButton>
+              )}
               <label className="block">
                 <span className="mb-2 flex items-center gap-2 text-sm font-semibold text-muted">
-                  <IconLink className="h-4 w-4" /> O usa tu propia URL
+                  <IconLink className="h-4 w-4" /> O cambia la URL
                 </span>
                 <input
                   className="neu-input px-4 py-2.5 text-sm"
@@ -414,78 +453,86 @@ export function PostComposer({
             </div>
           </div>
         ) : (
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <textarea
-                className="neu-input min-h-20 flex-1 resize-y px-4 py-3 text-sm"
-                placeholder="Describe la imagen, p. ej. «minimalist 3D render of a coffee cup on pastel background»"
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-              />
-              <div className="flex flex-col justify-end gap-2">
-                <NeuButton
-                  variant="primary"
-                  type="button"
-                  disabled={generating || !prompt.trim()}
-                  onClick={generateImage}
-                >
-                  {generating ? (
-                    <>
-                      <NeuSpinner className="h-4 w-4" /> Generando…
-                    </>
-                  ) : (
-                    <>
-                      <IconSparkles className="h-4 w-4" /> Generar
-                    </>
-                  )}
-                </NeuButton>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {IMAGE_SIZES.map((s, i) => (
-                <button
-                  key={s.label}
-                  type="button"
-                  onClick={() => setSizeIdx(i)}
-                  className={cn(
-                    "neu-chip px-3 py-1.5 text-xs font-semibold",
-                    i === sizeIdx ? "!shadow-[inset_3px_3px_7px_var(--shadow-dark),inset_-3px_-3px_7px_var(--shadow-light)] text-accent" : "text-muted",
-                  )}
-                  title={s.hint}
-                >
-                  {s.label}
-                </button>
-              ))}
-            </div>
-            <div>
-              <span className="mb-1.5 block text-xs font-semibold text-muted">Estilo</span>
-              <div className="flex flex-wrap gap-2">
-                {IMAGE_STYLES.map((s) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => setImageStyle(s.id)}
-                    className={cn(
-                      "neu-chip px-3 py-1.5 text-xs font-semibold",
-                      s.id === imageStyle ? "!shadow-[inset_3px_3px_7px_var(--shadow-dark),inset_-3px_-3px_7px_var(--shadow-light)] text-accent" : "text-muted",
-                    )}
-                  >
-                    {s.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+          <div className="flex flex-col gap-4">
+            <ModeToggle
+              value={imageMode}
+              onChange={setImageMode}
+              options={[
+                { id: "ai", label: "Generar con IA", icon: <IconSparkles className="h-3.5 w-3.5" /> },
+                { id: "upload", label: "Subir archivo", icon: <IconUpload className="h-3.5 w-3.5" /> },
+                { id: "url", label: "Pegar URL", icon: <IconLink className="h-3.5 w-3.5" /> },
+              ]}
+            />
 
-            <div className="flex items-center gap-3 text-xs font-semibold text-muted">
-              <span className="h-px flex-1 bg-current opacity-20" />
-              o usa tu propia imagen
-              <span className="h-px flex-1 bg-current opacity-20" />
-            </div>
+            {imageMode === "ai" && (
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-3 sm:flex-row">
+                  <textarea
+                    className="neu-input min-h-20 flex-1 resize-y px-4 py-3 text-sm"
+                    placeholder="Describe la imagen, p. ej. «minimalist 3D render of a coffee cup on pastel background»"
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                  />
+                  <div className="flex flex-col justify-end gap-2">
+                    <NeuButton
+                      variant="primary"
+                      type="button"
+                      disabled={generating || !prompt.trim()}
+                      onClick={generateImage}
+                    >
+                      {generating ? (
+                        <>
+                          <NeuSpinner className="h-4 w-4" /> Generando…
+                        </>
+                      ) : (
+                        <>
+                          <IconSparkles className="h-4 w-4" /> Generar
+                        </>
+                      )}
+                    </NeuButton>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {IMAGE_SIZES.map((s, i) => (
+                    <button
+                      key={s.label}
+                      type="button"
+                      onClick={() => setSizeIdx(i)}
+                      className={cn(
+                        "neu-chip px-3 py-1.5 text-xs font-semibold",
+                        i === sizeIdx ? "!shadow-[inset_3px_3px_7px_var(--shadow-dark),inset_-3px_-3px_7px_var(--shadow-light)] text-accent" : "text-muted",
+                      )}
+                      title={s.hint}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+                <div>
+                  <span className="mb-1.5 block text-xs font-semibold text-muted">Estilo</span>
+                  <div className="flex flex-wrap gap-2">
+                    {IMAGE_STYLES.map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => setImageStyle(s.id)}
+                        className={cn(
+                          "neu-chip px-3 py-1.5 text-xs font-semibold",
+                          s.id === imageStyle ? "!shadow-[inset_3px_3px_7px_var(--shadow-dark),inset_-3px_-3px_7px_var(--shadow-light)] text-accent" : "text-muted",
+                        )}
+                      >
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
 
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <label className="flex-1 cursor-pointer">
+            {imageMode === "upload" && (
+              <label className="block cursor-pointer">
                 <span className="mb-2 flex items-center gap-2 text-sm font-semibold text-muted">
-                  <IconUpload className="h-4 w-4" /> Subir desde tu equipo
+                  <IconUpload className="h-4 w-4" /> Elige una imagen desde tu equipo
                 </span>
                 <span className="neu-btn w-full !justify-center px-4 py-2.5 text-sm">
                   {uploading ? (
@@ -508,9 +555,12 @@ export function PostComposer({
                   }}
                 />
               </label>
-              <label className="flex-1 block">
+            )}
+
+            {imageMode === "url" && (
+              <label className="block">
                 <span className="mb-2 flex items-center gap-2 text-sm font-semibold text-muted">
-                  <IconLink className="h-4 w-4" /> O pega una URL
+                  <IconLink className="h-4 w-4" /> URL de la imagen
                 </span>
                 <input
                   className="neu-input px-4 py-2.5 text-sm"
@@ -519,7 +569,7 @@ export function PostComposer({
                   placeholder="https://…/imagen.jpg"
                 />
               </label>
-            </div>
+            )}
           </div>
         )}
       </NeuCard>
