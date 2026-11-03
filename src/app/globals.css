@@ -1,26 +1,249 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #f4f3f0;
+  --bg-soft: #e8eeea;
+  --fg: #2f363f;
+  --muted: #7a858c;
+  --surface: #f4f3f0;
+  --shadow-light: #ffffff;
+  --shadow-dark: #d9d5c9;
+  --accent: #c99a3b;
+  --accent-soft: #f3e3be;
+  --teal: #657870;
+  --teal-soft: #d8e0db;
+  --danger: #d9534f;
+  --warning: #eabb5e;
+  --radius: 22px;
+}
+
+.dark {
+  --bg: #1c2127;
+  --bg-soft: #2f363f;
+  --fg: #e8eeea;
+  --muted: #9aa3a9;
+  --surface: #2f363f;
+  --shadow-light: #3e4752;
+  --shadow-dark: #14181d;
+  --accent: #eabb5e;
+  --accent-soft: #4f5f56;
+  --teal: #9aada0;
+  --teal-soft: #3a4640;
+  --danger: #e38a86;
+  --warning: #f0cc82;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: var(--bg);
+  --color-background-soft: var(--bg-soft);
+  --color-foreground: var(--fg);
+  --color-muted: var(--muted);
+  --color-surface: var(--surface);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-teal: var(--teal);
+  --color-teal-soft: var(--teal-soft);
+  --color-danger: var(--danger);
+  --color-warning: var(--warning);
+  --radius-neu: var(--radius);
+
+  --shadow-neu:
+    7px 7px 14px var(--shadow-dark),
+    -7px -7px 14px var(--shadow-light);
+  --shadow-neu-sm:
+    4px 4px 9px var(--shadow-dark),
+    -4px -4px 9px var(--shadow-light);
+  --shadow-neu-inset:
+    inset 5px 5px 10px var(--shadow-dark),
+    inset -5px -5px 10px var(--shadow-light);
+  --shadow-neu-inset-sm:
+    inset 3px 3px 7px var(--shadow-dark),
+    inset -3px -3px 7px var(--shadow-light);
+
+  --font-sans: var(--font-josefin-sans);
+  --font-script: var(--font-fredoka);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
+}
+
+h1 {
+  font-family: var(--font-script), var(--font-sans);
+  letter-spacing: -0.01em;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background:
+    radial-gradient(1200px 600px at 80% -10%, var(--accent-soft) 0%, transparent 55%),
+    radial-gradient(900px 500px at -10% 110%, var(--teal-soft) 0%, transparent 50%),
+    var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  min-height: 100vh;
+}
+
+::selection {
+  background: var(--accent);
+  color: #fff;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--shadow-dark);
+  border-radius: 999px;
+  border: 2px solid var(--bg);
+}
+
+/* ---------- Neumorphism primitives ---------- */
+
+@layer components {
+  .neu-surface {
+    background: var(--surface);
+  }
+
+  .neu-raised {
+    border-radius: 30px 22px 28px 24px;
+    background: var(--surface);
+    box-shadow:
+      7px 7px 14px var(--shadow-dark),
+      -7px -7px 14px var(--shadow-light);
+  }
+
+  .neu-raised-sm {
+    border-radius: 20px 15px 19px 16px;
+    background: var(--surface);
+    box-shadow:
+      4px 4px 9px var(--shadow-dark),
+      -4px -4px 9px var(--shadow-light);
+  }
+
+  .neu-pressed {
+    border-radius: 30px 22px 28px 24px;
+    background: var(--surface);
+    box-shadow:
+      inset 5px 5px 10px var(--shadow-dark),
+      inset -5px -5px 10px var(--shadow-light);
+  }
+
+  .neu-pressed-sm {
+    border-radius: 20px 15px 19px 16px;
+    background: var(--surface);
+    box-shadow:
+      inset 3px 3px 7px var(--shadow-dark),
+      inset -3px -3px 7px var(--shadow-light);
+  }
+
+  .neu-edge {
+    border-radius: var(--radius);
+    background: var(--surface);
+    box-shadow: 2px 2px 5px var(--shadow-dark), -2px -2px 5px var(--shadow-light);
+  }
+
+  .neu-chip {
+    border-radius: 999px;
+    background: var(--surface);
+    box-shadow:
+      3px 3px 7px var(--shadow-dark),
+      -3px -3px 7px var(--shadow-light),
+      inset 1px 1px 2px var(--shadow-light);
+  }
+
+  .neu-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--fg);
+    box-shadow:
+      5px 5px 11px var(--shadow-dark),
+      -5px -5px 11px var(--shadow-light);
+    transition:
+      box-shadow 0.15s ease,
+      transform 0.08s ease,
+      background 0.15s ease,
+      color 0.15s ease;
+    user-select: none;
+  }
+
+  .neu-btn:hover {
+    box-shadow:
+      6px 6px 13px var(--shadow-dark),
+      -6px -6px 13px var(--shadow-light);
+  }
+
+  .neu-btn:active {
+    box-shadow:
+      inset 4px 4px 9px var(--shadow-dark),
+      inset -4px -4px 9px var(--shadow-light);
+    transform: translateY(1px);
+  }
+
+  .neu-btn--primary {
+    color: #3d3214;
+    background: linear-gradient(180deg, #f0cc82, var(--warning));
+    box-shadow:
+      5px 5px 11px var(--shadow-dark),
+      -5px -5px 11px var(--shadow-light),
+      inset 1px 1px 2px rgba(255, 255, 255, 0.6);
+  }
+  .neu-btn--primary:active {
+    box-shadow:
+      inset 4px 4px 9px rgba(150, 120, 0, 0.3),
+      inset -4px -4px 9px rgba(255, 255, 255, 0.2);
+  }
+
+  .neu-btn--teal {
+    color: #062b20;
+    background: linear-gradient(145deg, var(--teal), color-mix(in srgb, var(--teal) 82%, #000));
+    box-shadow:
+      5px 5px 11px var(--shadow-dark),
+      -5px -5px 11px var(--shadow-light),
+      inset 1px 1px 2px rgba(255, 255, 255, 0.4);
+  }
+
+  .neu-btn--danger {
+    color: #fff;
+    background: linear-gradient(145deg, var(--danger), color-mix(in srgb, var(--danger) 78%, #000));
+    box-shadow:
+      5px 5px 11px var(--shadow-dark),
+      -5px -5px 11px var(--shadow-light),
+      inset 1px 1px 2px rgba(255, 255, 255, 0.3);
+  }
+
+  .neu-btn--disabled {
+    opacity: 0.55;
+    pointer-events: none;
+  }
+
+  .neu-input {
+    width: 100%;
+    border-radius: 16px 12px 15px 13px;
+    background: var(--surface);
+    color: var(--fg);
+    box-shadow:
+      inset 3px 3px 7px var(--shadow-dark),
+      inset -3px -3px 7px var(--shadow-light);
+    transition: box-shadow 0.15s ease;
+  }
+  .neu-input:focus {
+    outline: none;
+    box-shadow:
+      inset 3px 3px 7px var(--shadow-dark),
+      inset -3px -3px 7px var(--shadow-light),
+      0 0 0 2px color-mix(in srgb, var(--accent) 60%, transparent);
+  }
+  .neu-input::placeholder {
+    color: var(--muted);
+  }
 }
