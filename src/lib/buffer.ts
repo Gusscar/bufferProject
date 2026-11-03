@@ -241,6 +241,12 @@ export async function getAggregatedMetrics(
   return data.aggregatedPostMetrics;
 }
 
+export type InstagramPostType = "post" | "story" | "reel";
+
+export interface PostInputMetadata {
+  instagram?: { type: InstagramPostType; shouldShareToFeed: boolean };
+}
+
 export interface CreatePostInput {
   channelId: string;
   text?: string;
@@ -251,6 +257,7 @@ export interface CreatePostInput {
   tagIds?: string[];
   saveToDraft?: boolean;
   needsApproval?: boolean;
+  metadata?: PostInputMetadata;
 }
 
 const CREATE_POST_MUTATION = /* GraphQL */ `
@@ -282,6 +289,7 @@ export async function createPost(input: CreatePostInput): Promise<string> {
         tagIds: input.tagIds,
         saveToDraft: input.saveToDraft,
         needsApproval: input.needsApproval ?? false,
+        metadata: input.metadata,
       },
     },
     { bypass: true },
@@ -320,6 +328,7 @@ export async function editPost(
         ...(input.dueAt !== undefined ? { dueAt: input.dueAt } : {}),
         ...(input.mode !== undefined ? { mode: input.mode } : {}),
         ...(input.assets !== undefined ? { assets: input.assets } : {}),
+        ...(input.metadata !== undefined ? { metadata: input.metadata } : {}),
       },
     },
     { bypass: true },

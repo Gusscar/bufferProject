@@ -182,6 +182,13 @@ export const IconCpu = (p: IconProps) => (
   </svg>
 );
 
+export const IconUpload = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M12 16V4M7 9l5-5 5 5" />
+    <path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" />
+  </svg>
+);
+
 export const IconStack = (p: IconProps) => (
   <svg {...base(p)}>
     <path d="m12 2 10 5-10 5L2 7l10-5z" />

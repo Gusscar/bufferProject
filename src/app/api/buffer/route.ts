@@ -72,6 +72,7 @@ type Body =
         assets?: unknown[];
         tagIds?: string[];
         saveToDraft?: boolean;
+        metadata?: Record<string, unknown>;
       };
     }
   | { op: "editPost"; id: string; input: Record<string, unknown> }
@@ -122,6 +123,7 @@ export async function POST(request: Request) {
           assets: resolveAssetUrls(body.input.assets) as never,
           tagIds: body.input.tagIds,
           saveToDraft: body.input.saveToDraft,
+          metadata: body.input.metadata as never,
         });
         return NextResponse.json({ id });
       }

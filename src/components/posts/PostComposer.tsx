@@ -14,6 +14,7 @@ import {
   IconLink,
   IconRefresh,
   IconSparkles,
+  IconUpload,
 } from "@/components/icons";
 import type { Channel } from "@/types";
 import type { ComposerInit } from "@/components/posts/PostsBoard";
@@ -36,6 +37,12 @@ const MODES: Record<string, string> = {
   shareNow: "Publicar ahora",
 };
 
+const INSTAGRAM_TYPES: Record<string, string> = {
+  post: "Publicación",
+  story: "Historia",
+  reel: "Reel",
+};
+
 export function PostComposer({
   channels,
   init,
@@ -54,15 +61,16 @@ export function PostComposer({
     init?.dueAt ? toLocalInput(init.dueAt) : tomorrowOneHour(),
   );
   const [imageUrl, setImageUrl] = useState(init?.imageUrl ?? "");
+  const [instagramType, setInstagramType] = useState<"post" | "story" | "reel">("post");
   const [prompt, setPrompt] = useState("");
   const [aiPrompt, setAiPrompt] = useState("");
   const [sizeIdx, setSizeIdx] = useState(0);
   const [generating, setGenerating] = useState(false);
   const [generatingText, setGeneratingText] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
-  const [saveAsDraft, setSaveAsDraft] = useState(false);
   const counterRef = useRef(0);
 
   const channel = useMemo(
@@ -70,6 +78,24 @@ export function PostComposer({
     [channels, channelId],
   );
   const charLimit = CHANNEL_LIMIT(channel?.service);
+
+  async function uploadImageFile(file: File) {
+    setUploading(true);
+    setError(null);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: form });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "No se pudo subir la imagen.");
+      setImageUrl(json.url);
+      setOk("Imagen subida correctamente.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error subiendo la imagen.");
+    } finally {
+      setUploading(false);
+    }
+  }
 
   async function generateImage() {
     const p = prompt.trim();
@@ -172,6 +198,12 @@ export function PostComposer({
       if (mode !== "customScheduled") payload.dueAt = undefined;
       if (isEdit) payload.text = text || "";
 
+      if (channel?.service === "instagram") {
+        payload.metadata = {
+          instagram: { type: instagramType, shouldShareToFeed: true },
+        };
+      }
+
       const op = isEdit ? "editPost" : "createPost";
       const res = await fetch("/api/buffer", {
         method: "POST",
@@ -227,6 +259,21 @@ export function PostComposer({
         </NeuSelect>
       </div>
 
+      {channel?.service === "instagram" && (
+        <NeuSelect
+          label="Tipo de publicación en Instagram"
+          value={instagramType}
+          onChange={(e) => setInstagramType(e.target.value as "post" | "story" | "reel")}
+          className="sm:max-w-xs"
+        >
+          {(Object.keys(INSTAGRAM_TYPES) as Array<keyof typeof INSTAGRAM_TYPES>).map((t) => (
+            <option key={t} value={t}>
+              {INSTAGRAM_TYPES[t]}
+            </option>
+          ))}
+        </NeuSelect>
+      )}
+
       {mode === "customScheduled" && (
         <NeuInput
           type="datetime-local"
@@ -249,7 +296,7 @@ export function PostComposer({
       {/* AI text generator */}
       <NeuCard className="flex flex-col gap-4">
         <p className="flex items-center gap-2 text-sm font-bold">
-          <IconSparkles className="text-accent" /> Texto con IA (gratis)
+          <IconSparkles className="text-accent" /> Texto con IA
         </p>
         <div className="flex flex-col gap-3 sm:flex-row">
           <textarea
@@ -398,40 +445,60 @@ export function PostComposer({
                 </button>
               ))}
             </div>
+
+            <div className="flex items-center gap-3 text-xs font-semibold text-muted">
+              <span className="h-px flex-1 bg-current opacity-20" />
+              o usa tu propia imagen
+              <span className="h-px flex-1 bg-current opacity-20" />
+            </div>
+
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <label className="flex-1 cursor-pointer">
+                <span className="mb-2 flex items-center gap-2 text-sm font-semibold text-muted">
+                  <IconUpload className="h-4 w-4" /> Subir desde tu equipo
+                </span>
+                <span className="neu-btn w-full !justify-center px-4 py-2.5 text-sm">
+                  {uploading ? (
+                    <>
+                      <NeuSpinner className="h-4 w-4" /> Subiendo…
+                    </>
+                  ) : (
+                    "Elegir archivo"
+                  )}
+                </span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="sr-only"
+                  disabled={uploading}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) void uploadImageFile(file);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+              <label className="flex-1 block">
+                <span className="mb-2 flex items-center gap-2 text-sm font-semibold text-muted">
+                  <IconLink className="h-4 w-4" /> O pega una URL
+                </span>
+                <input
+                  className="neu-input px-4 py-2.5 text-sm"
+                  value={imageUrl}
+                  onChange={(e) => setImageUrl(e.target.value)}
+                  placeholder="https://…/imagen.jpg"
+                />
+              </label>
+            </div>
           </div>
         )}
       </NeuCard>
-
-      {!isEdit && (
-        <label className="flex cursor-pointer items-center gap-3 text-sm font-medium">
-          <span
-            className={cn(
-              "neu-pressed-sm flex h-6 w-11 items-center rounded-full px-0.5",
-              saveAsDraft ? "justify-end" : "justify-start",
-            )}
-          >
-            <span
-              className={cn(
-                "h-5 w-5 rounded-full",
-                saveAsDraft ? "bg-accent" : "bg-muted",
-              )}
-            />
-          </span>
-          <input
-            type="checkbox"
-            className="sr-only"
-            checked={saveAsDraft}
-            onChange={(e) => setSaveAsDraft(e.target.checked)}
-          />
-          Guardar como borrador
-        </label>
-      )}
 
       <div className="flex items-center justify-end gap-3">
         <NeuButton variant="ghost" type="button" onClick={() => onDone()}>
           Cancelar
         </NeuButton>
-        <NeuButton variant="primary" type="submit" loading={busy} disabled={generating || generatingText}>
+        <NeuButton variant="primary" type="submit" loading={busy} disabled={generating || generatingText || uploading}>
           {busy ? "Guardando…" : isEdit ? "Guardar cambios" : "Crear publicación"}
         </NeuButton>
       </div>
