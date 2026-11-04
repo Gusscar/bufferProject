@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { put } from "@vercel/blob";
 import { buildImageUrl, IMAGE_SIZES } from "@/lib/pollinations";
 import { getPollinationsApiKey } from "@/lib/store";
 import { translateApiError } from "@/lib/errorTranslate";
@@ -6,6 +7,15 @@ import { translateApiError } from "@/lib/errorTranslate";
 const MAX_PROMPT = 1200;
 const TIMEOUT_MS = 120_000;
 
+// Genera la imagen UNA sola vez contra Pollinations y la sube a Vercel Blob,
+// devolviendo una URL permanente. Antes se devolvía una URL "proxy en vivo"
+// (GET /api/image?...) que volvía a pedirle la imagen a Pollinations en cada
+// visita — incluido cuando Buffer la valida al crear el post. Pollinations
+// gratis limita a ~1 solicitud cada 15s, así que esa segunda llamada muchas
+// veces llegaba limitada y Buffer no podía leer la imagen ("image could not
+// be read from its url"). Una URL de Blob estable evita depender de
+// Pollinations después de generar la imagen, como exige la guía de Buffer
+// sobre hosting de media.
 export async function POST(request: Request) {
   let body: { prompt?: string; width?: number; height?: number; model?: string; seed?: number };
   try {
@@ -25,21 +35,97 @@ export async function POST(request: Request) {
     );
   }
 
+  const apiKey = getPollinationsApiKey();
+  if (!apiKey) {
+    return NextResponse.json(
+      {
+        error:
+          "Falta la API key de Pollinations. Configúrala en Ajustes o con POLLINATIONS_API_KEY en .env.local.",
+      },
+      { status: 401 },
+    );
+  }
+
+  if (!process.env.BLOB_STORE_ID && !process.env.BLOB_READ_WRITE_TOKEN) {
+    return NextResponse.json(
+      {
+        error:
+          "Falta configurar el almacenamiento de imágenes. Habilita Vercel Blob en tu proyecto (Storage → Create Database → Blob) y conéctalo a este proyecto.",
+      },
+      { status: 500 },
+    );
+  }
+
   const size = IMAGE_SIZES.some(
     (s) => s.width === body.width && s.height === body.height,
   )
-    ? { width: body.width, height: body.height }
+    ? { width: body.width!, height: body.height! }
     : { width: 1080, height: 1080 };
 
-  const params = new URLSearchParams({
-    prompt,
-    width: String(size.width),
-    height: String(size.height),
+  const url = buildImageUrl(prompt, {
+    width: size.width,
+    height: size.height,
+    model: body.model,
+    seed: body.seed,
   });
-  if (body.model) params.set("model", body.model);
-  if (body.seed != null) params.set("seed", String(body.seed));
 
-  return NextResponse.json({ url: `/api/image?${params.toString()}` });
+  let upstream: Response;
+  try {
+    upstream = await fetch(url, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      cache: "no-store",
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+  } catch {
+    return NextResponse.json(
+      { error: "Tiempo de espera agotado al generar la imagen. Inténtalo de nuevo." },
+      { status: 504 },
+    );
+  }
+
+  if (!upstream.ok) {
+    const message = await upstream
+      .text()
+      .then((t) => {
+        try {
+          const parsed = JSON.parse(t) as { error?: { message?: string } };
+          return parsed?.error?.message || t;
+        } catch {
+          return t;
+        }
+      })
+      .catch(() => undefined);
+    return NextResponse.json(
+      {
+        error: message
+          ? translateApiError(message)
+          : `Pollinations devolvió un error (${upstream.status}).`,
+      },
+      { status: upstream.status },
+    );
+  }
+
+  if (!upstream.body) {
+    return NextResponse.json(
+      { error: "Pollinations no devolvió datos de imagen." },
+      { status: 502 },
+    );
+  }
+
+  const contentType = upstream.headers.get("content-type") ?? "image/jpeg";
+  const ext = contentType.includes("png") ? "png" : contentType.includes("webp") ? "webp" : "jpg";
+
+  try {
+    const blob = await put(`ai/${Date.now()}.${ext}`, upstream.body, {
+      access: "public",
+      addRandomSuffix: true,
+      contentType,
+    });
+    return NextResponse.json({ url: blob.url });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Error desconocido.";
+    return NextResponse.json({ error: translateApiError(message) }, { status: 502 });
+  }
 }
 
 export async function GET(request: Request) {

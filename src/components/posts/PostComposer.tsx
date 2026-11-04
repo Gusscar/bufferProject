@@ -124,6 +124,17 @@ export function PostComposer({
   );
   const charLimit = CHANNEL_LIMIT(channel?.service);
 
+  // Tamaño de imagen recomendado según el tipo de contenido de Instagram
+  // (el usuario puede cambiarlo a mano con los chips de tamaño).
+  function applyRecommendedSize(service: string | undefined, igType: "post" | "story" | "reel") {
+    if (service !== "instagram") return;
+    const wantFullscreen = igType === "story" || igType === "reel";
+    const index = IMAGE_SIZES.findIndex((s) =>
+      wantFullscreen ? s.height === 1920 : s.width === 1080 && s.height === 1080,
+    );
+    if (index >= 0) setSizeIdx(index);
+  }
+
   async function uploadImageFile(file: File) {
     setUploading(true);
     setError(null);
@@ -284,7 +295,16 @@ export function PostComposer({
       )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <NeuSelect label="Canal" required value={channelId} onChange={(e) => setChannelId(e.target.value)}>
+        <NeuSelect
+          label="Canal"
+          required
+          value={channelId}
+          onChange={(e) => {
+            const id = e.target.value;
+            setChannelId(id);
+            applyRecommendedSize(channels.find((c) => c.id === id)?.service, instagramType);
+          }}
+        >
           <option value="" disabled>
             Selecciona un canal…
           </option>
@@ -311,7 +331,11 @@ export function PostComposer({
         <NeuSelect
           label="Tipo de publicación en Instagram"
           value={instagramType}
-          onChange={(e) => setInstagramType(e.target.value as "post" | "story" | "reel")}
+          onChange={(e) => {
+            const value = e.target.value as "post" | "story" | "reel";
+            setInstagramType(value);
+            applyRecommendedSize(channel?.service, value);
+          }}
           className="sm:max-w-xs"
         >
           {(Object.keys(INSTAGRAM_TYPES) as Array<keyof typeof INSTAGRAM_TYPES>).map((t) => (
@@ -492,21 +516,29 @@ export function PostComposer({
                     </NeuButton>
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {IMAGE_SIZES.map((s, i) => (
-                    <button
-                      key={s.label}
-                      type="button"
-                      onClick={() => setSizeIdx(i)}
-                      className={cn(
-                        "neu-chip px-3 py-1.5 text-xs font-semibold",
-                        i === sizeIdx ? "!shadow-[inset_3px_3px_7px_var(--shadow-dark),inset_-3px_-3px_7px_var(--shadow-light)] text-accent" : "text-muted",
-                      )}
-                      title={s.hint}
-                    >
-                      {s.label}
-                    </button>
-                  ))}
+                <div>
+                  <span className="mb-1.5 block text-xs font-semibold text-muted">
+                    Tamaño
+                    {channel?.service === "instagram" && (
+                      <> · recomendado para {INSTAGRAM_TYPES[instagramType].toLowerCase()}</>
+                    )}
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    {IMAGE_SIZES.map((s, i) => (
+                      <button
+                        key={s.label}
+                        type="button"
+                        onClick={() => setSizeIdx(i)}
+                        className={cn(
+                          "neu-chip px-3 py-1.5 text-xs font-semibold",
+                          i === sizeIdx ? "!shadow-[inset_3px_3px_7px_var(--shadow-dark),inset_-3px_-3px_7px_var(--shadow-light)] text-accent" : "text-muted",
+                        )}
+                        title={s.hint}
+                      >
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <div>
                   <span className="mb-1.5 block text-xs font-semibold text-muted">Estilo</span>
