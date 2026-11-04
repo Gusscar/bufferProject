@@ -1,8 +1,17 @@
-import type { AppStore, KpiSnapshot } from "@/types";
+import type { AppStore, BrandProfile, KpiSnapshot } from "@/types";
 
 declare global {
   var __appStore: AppStore | undefined;
 }
+
+export const DEFAULT_BRAND: BrandProfile = {
+  name: "Niños de la Luz Venezuela",
+  mission: "",
+  tone: "",
+  audience: "",
+  visualStyle: "",
+  hashtags: "",
+};
 
 const defaults = (): AppStore => ({
   bufferApiKey: undefined,
@@ -12,6 +21,7 @@ const defaults = (): AppStore => ({
   imageSeed: Math.floor(Math.random() * 1_000_000),
   snapshots: [],
   bufferCache: {},
+  brand: DEFAULT_BRAND,
 });
 
 export function getStore(): AppStore {

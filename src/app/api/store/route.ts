@@ -7,6 +7,8 @@ import {
   setBufferApiKey,
   setPollinationsApiKey,
 } from "@/lib/store";
+import { getBrand, setBrand } from "@/lib/brand";
+import type { BrandProfile } from "@/types";
 
 type Body =
   | { action: "list" }
@@ -14,6 +16,7 @@ type Body =
   | { action: "setPollinationsKey"; key: string }
   | { action: "setModel"; model: string }
   | { action: "setLlmModel"; model: string }
+  | { action: "setBrand"; brand: Partial<BrandProfile> }
   | {
       action: "addSnapshot";
       snapshot: { date: string; metrics: Record<string, number>; channelFilter: string };
@@ -27,6 +30,7 @@ export async function GET() {
     model: store.pollinationsModel,
     llmModel: store.llmModel,
     snapshots: listSnapshots(),
+    brand: await getBrand(),
   });
 }
 
@@ -72,6 +76,11 @@ export async function POST(request: Request) {
     case "setLlmModel": {
       getStore().llmModel = body.model;
       return NextResponse.json({ ok: true });
+    }
+
+    case "setBrand": {
+      const brand = await setBrand(body.brand);
+      return NextResponse.json({ ok: true, brand });
     }
 
     case "addSnapshot": {

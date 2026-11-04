@@ -139,6 +139,15 @@ export interface ConnectionState {
   channels: Channel[];
 }
 
+export interface BrandProfile {
+  name: string;
+  mission: string;
+  tone: string;
+  audience: string;
+  visualStyle: string;
+  hashtags: string;
+}
+
 export interface AppStore {
   bufferApiKey?: string;
   pollinationsApiKey?: string;
@@ -147,4 +156,5 @@ export interface AppStore {
   imageSeed: number;
   snapshots: KpiSnapshot[];
   bufferCache: Record<string, { ts: number; value: unknown }>;
+  brand: BrandProfile;
 }

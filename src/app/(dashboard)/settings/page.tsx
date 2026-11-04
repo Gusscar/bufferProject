@@ -1,4 +1,5 @@
 import { getStore } from "@/lib/store";
+import { getBrand } from "@/lib/brand";
 import { getAccount, getChannels, BufferError } from "@/lib/buffer";
 import { SettingsForm } from "@/components/settings/SettingsForm";
 import type { Account, Channel } from "@/types";
@@ -26,6 +27,8 @@ export default async function SettingsPage() {
     }
   }
 
+  const brand = await getBrand();
+
   return (
     <SettingsForm
       configured={configured}
@@ -33,6 +36,7 @@ export default async function SettingsPage() {
       channels={channels}
       model={store.pollinationsModel}
       llmModel={store.llmModel}
+      brand={brand}
     />
   );
 }

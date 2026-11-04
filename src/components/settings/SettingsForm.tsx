@@ -7,6 +7,7 @@ import { NeuButton, NeuSpinner } from "@/components/neu/NeuButton";
 import { NeuCard } from "@/components/neu/NeuCard";
 import { NeuInput } from "@/components/neu/NeuInput";
 import { NeuSelect } from "@/components/neu/NeuSelect";
+import { NeuTextarea } from "@/components/neu/NeuTextarea";
 import { listImageModels } from "@/lib/pollinations";
 import { listTextModels } from "@/lib/llm";
 import { cn, SERVICE_LABEL } from "@/lib/format";
@@ -17,7 +18,7 @@ import {
   IconSparkles,
   IconStack,
 } from "@/components/icons";
-import type { Account, Channel } from "@/types";
+import type { Account, BrandProfile, Channel } from "@/types";
 import { SetupForm } from "@/components/SetupForm";
 
 export function SettingsForm({
@@ -26,12 +27,14 @@ export function SettingsForm({
   channels,
   model,
   llmModel,
+  brand,
 }: {
   configured: boolean;
   account: Account | null;
   channels: Channel[];
   model: string;
   llmModel: string;
+  brand: BrandProfile;
 }) {
   const router = useRouter();
   const [key, setKey] = useState("");
@@ -45,6 +48,9 @@ export function SettingsForm({
   const [activeLlmModel, setActiveLlmModel] = useState(llmModel || "openai");
   const [savingLlmModel, setSavingLlmModel] = useState(false);
   const [message, setMessage] = useState<{ kind: "error" | "ok"; text: string } | null>(null);
+  const [brandForm, setBrandForm] = useState<BrandProfile>(brand);
+  const [savingBrand, setSavingBrand] = useState(false);
+  const [brandMessage, setBrandMessage] = useState<{ kind: "error" | "ok"; text: string } | null>(null);
 
   async function saveKey(e: React.FormEvent) {
     e.preventDefault();
@@ -145,6 +151,26 @@ export function SettingsForm({
       setMessage({ kind: "error", text: e instanceof Error ? e.message : "Error al guardar." });
     } finally {
       setSavingLlmModel(false);
+    }
+  }
+
+  async function saveBrand(e: React.FormEvent) {
+    e.preventDefault();
+    setSavingBrand(true);
+    setBrandMessage(null);
+    try {
+      const res = await fetch("/api/store", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "setBrand", brand: brandForm }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json.error ?? "No se pudo guardar el branding.");
+      setBrandMessage({ kind: "ok", text: "Branding guardado. Se usará en las generaciones con IA." });
+    } catch (e) {
+      setBrandMessage({ kind: "error", text: e instanceof Error ? e.message : "Error al guardar." });
+    } finally {
+      setSavingBrand(false);
     }
   }
 
@@ -349,10 +375,80 @@ export function SettingsForm({
         </ul>
       </NeuCard>
 
+      {/* Branding */}
+      <NeuCard className="flex flex-col gap-4">
+        <h2 className="flex items-center gap-2 text-sm font-bold">
+          <IconStack className="text-accent" /> Branding de la fundación
+        </h2>
+        <p className="text-sm text-muted">
+          Este contexto se usa cuando el switch &quot;Usar branding&quot; está activado al
+          generar texto o imágenes con IA en el composer de publicaciones. Si lo dejas vacío,
+          la IA genera contenido genérico aunque el switch esté activado.
+        </p>
+        <form onSubmit={(e) => void saveBrand(e)} className="flex flex-col gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <NeuInput
+              label="Nombre de la marca"
+              placeholder="Niños de la Luz Venezuela"
+              value={brandForm.name}
+              onChange={(e) => setBrandForm({ ...brandForm, name: e.target.value })}
+            />
+            <NeuInput
+              label="Público objetivo"
+              placeholder="Donantes, voluntarios y familias en Venezuela"
+              value={brandForm.audience}
+              onChange={(e) => setBrandForm({ ...brandForm, audience: e.target.value })}
+            />
+          </div>
+          <NeuTextarea
+            label="Misión / qué hace la fundación"
+            placeholder="Describe brevemente la misión y el trabajo de la fundación…"
+            value={brandForm.mission}
+            onChange={(e) => setBrandForm({ ...brandForm, mission: e.target.value })}
+          />
+          <NeuTextarea
+            label="Tono de voz"
+            placeholder="Ej. cercano, esperanzador, profesional, sin tecnicismos…"
+            value={brandForm.tone}
+            onChange={(e) => setBrandForm({ ...brandForm, tone: e.target.value })}
+          />
+          <NeuTextarea
+            label="Estilo visual para imágenes generadas con IA"
+            placeholder="Ej. colores cálidos, luz natural, fotografía documental, niños sonriendo, sin texto superpuesto…"
+            value={brandForm.visualStyle}
+            onChange={(e) => setBrandForm({ ...brandForm, visualStyle: e.target.value })}
+          />
+          <NeuInput
+            label="Hashtags de marca (opcional)"
+            placeholder="#NiñosDeLaLuz #Venezuela"
+            value={brandForm.hashtags}
+            onChange={(e) => setBrandForm({ ...brandForm, hashtags: e.target.value })}
+          />
+          {brandMessage && (
+            <p
+              className={cn(
+                "flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium",
+                brandMessage.kind === "ok" ? "bg-teal-soft text-teal" : "bg-danger/10 text-danger",
+              )}
+            >
+              {brandMessage.kind === "ok" ? (
+                <IconCheck width={16} height={16} />
+              ) : (
+                <IconAlert width={16} height={16} />
+              )}
+              {brandMessage.text}
+            </p>
+          )}
+          <NeuButton type="submit" variant="primary" loading={savingBrand} className="self-start">
+            {savingBrand ? "Guardando…" : "Guardar branding"}
+          </NeuButton>
+        </form>
+      </NeuCard>
+
       {/* Text AI */}
       <NeuCard className="flex flex-col gap-4">
         <h2 className="flex items-center gap-2 text-sm font-bold">
-          <IconSparkles className="text-accent" /> Texto con IA (gratis)
+          <IconSparkles className="text-accent" /> Texto con IA
         </h2>
         <p className="text-sm text-muted">
           Usa el mismo proveedor y API key de Pollinations para generar el texto de los posts

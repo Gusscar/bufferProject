@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { NeuButton, NeuSpinner } from "@/components/neu/NeuButton";
 import { NeuInput } from "@/components/neu/NeuInput";
 import { NeuSelect } from "@/components/neu/NeuSelect";
@@ -18,8 +18,18 @@ import {
   IconSparkles,
   IconUpload,
 } from "@/components/icons";
-import type { Channel } from "@/types";
+import type { BrandProfile, Channel } from "@/types";
 import type { ComposerInit } from "@/components/posts/PostsBoard";
+
+function brandTextContext(brand: BrandProfile): string {
+  const lines: string[] = [`Escribes en nombre de "${brand.name || "la fundación"}".`];
+  if (brand.mission.trim()) lines.push(`Misión: ${brand.mission.trim()}`);
+  if (brand.tone.trim()) lines.push(`Tono de voz: ${brand.tone.trim()}`);
+  if (brand.audience.trim()) lines.push(`Público objetivo: ${brand.audience.trim()}`);
+  if (brand.hashtags.trim()) lines.push(`Hashtags de marca disponibles (úsalos solo si encajan): ${brand.hashtags.trim()}`);
+  lines.push("Mantén coherencia con esta identidad de marca en el texto generado.");
+  return lines.join("\n");
+}
 
 function ModeToggle<T extends string>({
   options,
@@ -116,7 +126,24 @@ export function PostComposer({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
+  const [brand, setBrand] = useState<BrandProfile | null>(null);
+  const [brandingEnabled, setBrandingEnabled] = useState(true);
   const counterRef = useRef(0);
+
+  useEffect(() => {
+    fetch("/api/store")
+      .then((res) => res.json())
+      .then((json) => {
+        if (json?.brand) setBrand(json.brand);
+      })
+      .catch(() => {
+        /* el switch simplemente queda sin efecto si no hay branding configurado */
+      });
+  }, []);
+
+  const hasBrandContext = Boolean(
+    brand && (brand.mission || brand.tone || brand.audience || brand.visualStyle || brand.hashtags),
+  );
 
   const channel = useMemo(
     () => channels.find((c) => c.id === channelId),
@@ -166,7 +193,8 @@ export function PostComposer({
     try {
       const size = IMAGE_SIZES[sizeIdx];
       const styleSuffix = IMAGE_STYLES.find((s) => s.id === imageStyle)?.suffix;
-      const finalPrompt = styleSuffix ? `${p}, ${styleSuffix}` : p;
+      const brandSuffix = brandingEnabled && brand?.visualStyle.trim() ? brand.visualStyle.trim() : "";
+      const finalPrompt = [p, styleSuffix, brandSuffix].filter(Boolean).join(", ");
       const res = await fetch("/api/image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -197,12 +225,15 @@ export function PostComposer({
     setGeneratingText(true);
     setError(null);
     try {
+      const baseSystem =
+        "Eres un copywriter experto en redes sociales. Redacta la publicación completa solicitada por el usuario en español, con un tono cercano y profesional. No añadas hashtags repetidos ni emojis en exceso, no uses comillas, y devuelve únicamente el texto de la publicación.";
+      const system =
+        brandingEnabled && brand ? `${baseSystem}\n\n${brandTextContext(brand)}` : baseSystem;
       const res = await fetch("/api/llm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          system:
-            "Eres un copywriter experto en redes sociales. Redacta la publicación completa solicitada por el usuario en español, con un tono cercano y profesional. No añadas hashtags repetidos ni emojis en exceso, no uses comillas, y devuelve únicamente el texto de la publicación.",
+          system,
           user: `${p}\n\nRed social: ${SERVICE_LABEL[channel?.service ?? ""] ?? "genérica"}. Máximo ${charLimit} caracteres.`,
           maxChars: charLimit,
         }),
@@ -327,6 +358,38 @@ export function PostComposer({
           ))}
         </NeuSelect>
       </div>
+
+      <label className="neu-raised-sm flex cursor-pointer items-center justify-between gap-3 px-4 py-3">
+        <span>
+          <span className="flex items-center gap-2 text-sm font-semibold">
+            <IconSparkles className="h-4 w-4 text-accent" />
+            Usar branding {brand?.name ? `de ${brand.name}` : "de la fundación"} en la IA
+          </span>
+          <span className="mt-0.5 block text-xs text-muted">
+            {hasBrandContext
+              ? "Aplica la misión, tono y estilo visual configurados en Ajustes al generar texto o imagen."
+              : "No has configurado el branding en Ajustes todavía; aunque lo actives, la IA generará contenido genérico."}
+          </span>
+        </span>
+        <span className="flex shrink-0 items-center gap-2">
+          <span
+            className={cn(
+              "neu-pressed-sm flex h-6 w-11 items-center rounded-full px-0.5",
+              brandingEnabled ? "justify-end" : "justify-start",
+            )}
+          >
+            <span
+              className={cn("h-5 w-5 rounded-full", brandingEnabled ? "bg-accent" : "bg-muted")}
+            />
+          </span>
+          <input
+            type="checkbox"
+            className="sr-only"
+            checked={brandingEnabled}
+            onChange={(e) => setBrandingEnabled(e.target.checked)}
+          />
+        </span>
+      </label>
 
       {channel?.service === "instagram" && (
         <NeuSelect
