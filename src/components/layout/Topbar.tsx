@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import {
   IconBell,
+  IconCalendar,
   IconDashboard,
   IconPosts,
   IconChart,
@@ -16,6 +17,7 @@ import Link from "next/link";
 const NAV = [
   { href: "/dashboard", label: "Panel", icon: IconDashboard },
   { href: "/posts", label: "Posts", icon: IconPosts },
+  { href: "/calendar", label: "Calendario", icon: IconCalendar },
   { href: "/insights", label: "KPIs", icon: IconChart },
   { href: "/schedule", label: "Horarios", icon: IconClock },
   { href: "/settings", label: "Ajustes", icon: IconSettings },

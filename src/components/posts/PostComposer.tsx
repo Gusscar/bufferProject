@@ -96,7 +96,7 @@ export function PostComposer({
 }) {
   const isEdit = Boolean(init?.postId);
 
-  const [channelId, setChannelId] = useState("");
+  const [channelId, setChannelId] = useState(init?.channelId ?? "");
   const [text, setText] = useState(init?.text ?? "");
   const [mode, setMode] = useState(init?.mode ?? "addToQueue");
   const [dueAt, setDueAt] = useState(
@@ -296,8 +296,9 @@ export function PostComposer({
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <NeuSelect
-          label="Canal"
+          label={isEdit ? "Canal (no se puede cambiar)" : "Canal"}
           required
+          disabled={isEdit}
           value={channelId}
           onChange={(e) => {
             const id = e.target.value;

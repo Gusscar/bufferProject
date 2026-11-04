@@ -189,6 +189,18 @@ export const IconUpload = (p: IconProps) => (
   </svg>
 );
 
+export const IconChevronLeft = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M15 18l-6-6 6-6" />
+  </svg>
+);
+
+export const IconChevronRight = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M9 18l6-6-6-6" />
+  </svg>
+);
+
 export const IconStack = (p: IconProps) => (
   <svg {...base(p)}>
     <path d="m12 2 10 5-10 5L2 7l10-5z" />

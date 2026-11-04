@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/format";
 import {
+  IconCalendar,
   IconChart,
   IconClock,
   IconDashboard,
@@ -15,6 +16,7 @@ import {
 const NAV = [
   { href: "/dashboard", label: "Panel", icon: IconDashboard },
   { href: "/posts", label: "Publicaciones", icon: IconPosts },
+  { href: "/calendar", label: "Calendario", icon: IconCalendar },
   { href: "/insights", label: "KPIs", icon: IconChart },
   { href: "/schedule", label: "Horarios", icon: IconClock },
 ];

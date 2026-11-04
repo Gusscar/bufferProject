@@ -26,6 +26,7 @@ import type { Channel, Post, PostsPage } from "@/types";
 
 export interface ComposerInit {
   postId?: string;
+  channelId?: string;
   text?: string;
   imageUrl?: string;
   mode?: string;
@@ -294,6 +295,7 @@ export function PostsBoard({
                   onClick={() => {
                     setComposerInit({
                       postId: post.id,
+                      channelId: post.channelId,
                       text: post.text,
                       imageUrl: asset?.source,
                       mode: post.shareMode ?? "customScheduled",
